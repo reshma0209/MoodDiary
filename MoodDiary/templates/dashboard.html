@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+  <h2>Welcome, {{ username }}!</h2>
+  <a href="{{ url_for('add_journal') }}">Add New Entry</a> |
+  <a href="{{ url_for('mood_chart') }}">View Mood Chart</a> |
+  <a href="{{ url_for('logout') }}">Logout</a>
+
+  <h3>Your Journal Entries</h3>
+  {% if entries %}
+    <ul>
+      {% for entry in entries %}
+        <li>
+          <strong>{{ entry.date }} {{ entry.time }} - {{ entry.mood }}</strong><br>
+          {{ entry.content }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No entries yet. Start writing!</p>
+  {% endif %}
+
+  <hr>
+
+<h3>📅 Mood Calendar</h3>
+<input type="date" id="datePicker">
+<div id="moodResult"></div>
+
+<style>
+  .mood-card {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 20px;
+    color: white;
+    font-weight: bold;
+    font-family: sans-serif;
+    background: linear-gradient(135deg, #42a5f5, #478ed1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+</style>
+
+<script>
+  document.getElementById('datePicker').addEventListener('change', function () {
+    const selectedDate = this.value;
+    fetch(`/mood_by_date?date=${selectedDate}`)
+      .then(response => response.json())
+      .then(data => {
+        const resultDiv = document.getElementById('moodResult');
+        resultDiv.innerHTML = '';
+
+        if (data.entries.length > 0) {
+          // Mood Badges
+          const moods = [...new Set(data.entries.map(entry => entry.mood))];
+          moods.forEach(mood => {
+            const badge = document.createElement('span');
+            badge.className = 'mood-card';
+            badge.textContent = mood;
+            resultDiv.appendChild(badge);
+          });
+
+          // Entries
+          data.entries.forEach(entry => {
+            const entryDiv = document.createElement('div');
+            entryDiv.innerHTML = `
+              <p><strong>${entry.date} ${entry.time} - ${entry.mood}</strong></p>
+              <p>${entry.content}</p>
+              <hr>
+            `;
+            resultDiv.appendChild(entryDiv);
+          });
+        } else {
+          resultDiv.innerHTML = `<p>No entry found for this date.</p>`;
+        }
+      });
+  });
+</script>
+
+
+{% endblock %}

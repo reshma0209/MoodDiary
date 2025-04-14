@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Mood Trends</h2>
+<canvas id="moodChart" width="400" height="200"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('moodChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ labels|tojson }},
+            datasets: [{
+                label: 'Mood Count',
+                data: {{ data|tojson }},
+                backgroundColor: [
+                    '#f44336',
+                    '#ff9800',
+                    '#4caf50',
+                    '#2196f3',
+                    '#9c27b0'
+                ]
+            }]
+        }
+    });
+</script>
+{% endblock %}

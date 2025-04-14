@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Mood Chart{% endblock %}
+
+{% block content %}
+  <h2>Mood Trends</h2>
+
+  {% if dates and moods %}
+    <canvas id="moodChart" width="200" height="100"></canvas>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const ctx = document.getElementById('moodChart').getContext('2d');
+      const moodChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+              labels: {{ dates|tojson }},
+              datasets: [{
+                  label: 'Mood Score (1-5)',
+                  data: {{ moods|tojson }},
+                  borderColor: 'rgba(75, 192, 192, 1)',
+                  borderWidth: 2,
+                  fill: false,
+                  tension: 0.3
+              }]
+          },
+          options: {
+              scales: {
+                  y: {
+                      title: {
+                          display: true,
+                          text: 'Mood Score'
+                      },
+                      min: 0,
+                      max: 5,
+                      ticks: {
+                          stepSize: 1
+                      }
+                  },
+                  x: {
+                      title: {
+                          display: true,
+                          text: 'Date & Time'
+                      }
+                  }
+              },
+              plugins: {
+                  tooltip: {
+                      callbacks: {
+                          label: function(context) {
+                              const moodLabels = {{ mood_labels|tojson }};
+                              return 'Mood: ' + moodLabels[context.dataIndex];
+                          }
+                      }
+                  }
+              }
+          }
+      });
+    </script>
+  {% else %}
+    <p>No mood entries to show yet. Add some journal entries!</p>
+  {% endif %}
+{% endblock %}

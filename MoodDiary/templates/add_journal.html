@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Journal Entry{% endblock %}
+
+{% block content %}
+  <div class="entry-container">
+    <h2>Add Journal Entry</h2>
+    <form method="POST">
+      <textarea name="content" placeholder="Write your thoughts..." rows="6" required></textarea><br>
+      <button type="submit">Save Mood</button>
+    </form>
+    <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+  </div>
+{% endblock %}

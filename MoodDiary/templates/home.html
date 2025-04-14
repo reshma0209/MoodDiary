@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(to right, #dbeafe, #e0f2fe);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .welcome-container {
+    background: white;
+    padding: 50px 40px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+  }
+
+  .welcome-container h1 {
+    margin-bottom: 30px;
+    font-size: 2.2rem;
+    color: #1e3a8a;
+  }
+
+  .welcome-buttons a {
+    display: inline-block;
+    margin: 10px 15px;
+    padding: 12px 30px;
+    background-color: #3b82f6;
+    color: white;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 25px;
+    transition: background-color 0.3s ease;
+  }
+
+  .welcome-buttons a:hover {
+    background-color: #2563eb;
+  }
+</style>
+
+<div class="welcome-container">
+  <h1>Welcome to Your Mood Journal 🌈</h1>
+  <div class="welcome-buttons">
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}">Sign Up</a>
+  </div>
+</div>
+{% endblock %}
