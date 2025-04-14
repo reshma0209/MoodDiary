@@ -2,9 +2,16 @@ from flask import Flask, jsonify, render_template, request, redirect, url_for, s
 from datetime import datetime
 import json
 import os
+from dotenv import load_dotenv
+import os
+
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+
+load_dotenv()  # Load environment variables
+app.secret_key = os.getenv("SECRET_KEY", "fallback_secret_key")
+
+
 
 users = {}
 journal_entries = {}
