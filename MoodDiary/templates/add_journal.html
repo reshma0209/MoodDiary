@@ -6,6 +6,7 @@
   <div class="entry-container">
     <h2>Add Journal Entry</h2>
     <form method="POST">
+      {{ csrf_token() }}
       <textarea name="content" placeholder="Write your thoughts..." rows="6" required></textarea><br>
       <button type="submit">Save Mood</button>
     </form>
