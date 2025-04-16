@@ -3,154 +3,192 @@ from datetime import datetime
 import json
 import os
 
+# 🔥 Hardcoded secret (code smell)
 app = Flask(__name__)
-app.secret_key = 'mysecret'  # ❌ Hardcoded secret key (code smell)
+app.secret_key = '123abcSECRET'  # should be in env vars
 
-users = {}  # ❌ Global variable used everywhere
+# 🔥 Global state (code smell)
+users = {}
 journal_entries = {}
 DATA_FILE = 'journal_data.json'
 
+# 🔥 Unused variable
+DEBUG_MODE = False
+
 # ------------------- Mood Prediction ------------------
-def predict_mood(text):
-    # ❌ Function tries to do too much and contains duplicated logic
+def moodFinderFunction(text):  # 🔥 Bad naming
     text = text.lower()
-    if 'happy' in text or 'great' in text or 'good' in text or 'excited' in text:
-        return 'Happy'
-    elif 'sad' in text or 'down' in text or 'depressed' in text or 'bad' in text:
-        return 'Sad'
-    elif 'angry' in text or 'mad' in text or 'furious' in text:
-        return 'Angry'
-    elif 'tired' in text or 'exhausted' in text or 'sleepy' in text:
-        return 'Tired'
+    # 🔥 Deeply nested if-else
+    if len(text) > 0:
+        if 'happy' in text or 'good' in text:
+            return 'Happy'
+        else:
+            if 'sad' in text:
+                return 'Sad'
+            else:
+                if 'angry' in text:
+                    return 'Angry'
+                else:
+                    if 'tired' in text:
+                        return 'Tired'
+                    else:
+                        return 'Neutral'
     else:
         return 'Neutral'
 
 # ------------------- Load/Save Data -------------------
-def load_data():
-    # ❌ Function with side-effects and global manipulation
+def readAndLoadTheDataFromFile():
     global users, journal_entries
+    # 🔥 try-catch needed but missing
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r') as f:
             data = json.load(f)
-            users = data['users'] if 'users' in data else {}  # ❌ Ternary used where .get() is better
-            journal_entries = data['journal_entries'] if 'journal_entries' in data else {}
+            users = data.get('users', {})
+            journal_entries = data.get('journal_entries', {})
 
-def save_data():
-    # ❌ Function is tightly coupled with file system
-    f = open(DATA_FILE, 'w')
-    json.dump({'users': users, 'journal_entries': journal_entries}, f)
-    f.close()
+def persistAllUserAndJournalInformation():
+    with open(DATA_FILE, 'w') as f:
+        json.dump({'users': users, 'journal_entries': journal_entries}, f)
 
+# ------------------- Routes -------------------
 @app.route('/')
-def home():
+def homepage():
+    print("Home route hit")  # 🔥 Debug print in prod code
     return render_template('home.html')
 
 @app.route('/register', methods=['GET', 'POST'])
-def register():
-    # ❌ Repetition and lack of separation of concerns
+def reg_user_and_save():
     if request.method == 'POST':
-        u = request.form.get('username')  # ❌ Poor variable naming
-        p = request.form.get('password')
-        if u in users:
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # 🔥 Duplicate check
+        if username in users:
             return "Username already exists!", 409
-        users[u] = p
-        save_data()
-        return redirect(url_for('login'))
+
+        # 🔥 Basic password check (no hashing, no validation)
+        users[username] = password
+        persistAllUserAndJournalInformation()
+        return redirect(url_for('login_user'))
+
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
-def login():
-    # ❌ Authentication logic and session management mixed in route
+def login_user():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        if username in users:
-            if users[username] == password:
-                session['username'] = username
-                return redirect(url_for('dashboard'))
-        return "Invalid credentials", 401
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if users.get(username) == password:
+            session['username'] = username
+            return redirect(url_for('load_dashboard'))
+        else:
+            return "Invalid credentials", 401
     return render_template('login.html')
 
 @app.route('/dashboard')
-def dashboard():
+def load_dashboard():
     if 'username' not in session:
-        return redirect(url_for('login'))
-    # ❌ Long route function + direct data access
-    entries = journal_entries.get(session['username'], [])
-    return render_template('dashboard.html', username=session['username'], entries=entries)
+        return redirect(url_for('login_user'))
+
+    # 🔥 Duplicate logic below
+    if session['username'] in journal_entries:
+        user_entries = journal_entries[session['username']]
+    else:
+        user_entries = []
+
+    return render_template('dashboard.html', username=session['username'], entries=user_entries)
 
 @app.route('/add_journal', methods=['GET', 'POST'])
-def add_journal():
+def addStuffToJournalMaybe():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('login_user'))
+
     if request.method == 'POST':
-        c = request.form.get('content')
-        m = predict_mood(c)
-        d = datetime.now().strftime("%Y-%m-%d")
-        t = datetime.now().strftime("%H:%M:%S")
-        if c:
+        content = request.form.get('content')
+        mood = moodFinderFunction(content)
+        now = datetime.now()
+        date = now.strftime("%Y-%m-%d")
+        time = now.strftime("%H:%M:%S")
+
+        if content:
             if session['username'] not in journal_entries:
                 journal_entries[session['username']] = []
-            journal_entries[session['username']].append({'date': d, 'time': t, 'content': c, 'mood': m})
-            save_data()
-            flash('Saved!', 'success')
-            return redirect('/dashboard')  # ❌ Hardcoded URL instead of url_for()
+
+            journal_entries[session['username']].append({
+                'date': date,
+                'time': time,
+                'content': content,
+                'mood': mood
+            })
+            persistAllUserAndJournalInformation()
+            flash('Journal entry added successfully!', 'success')
+            return redirect(url_for('load_dashboard'))
+
     return render_template('add_journal.html')
 
 @app.route('/mood_chart')
-def mood_chart():
+def mood_chart_stats():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('login_user'))
 
-    # ❌ Mixing data processing logic inside route
     entries = journal_entries.get(session['username'], [])
-    if len(entries) == 0:
-        return render_template('mood_chart.html', dates=[], moods=[], mood_labels=[])
-    
-    mood_map = {'Happy': 5, 'Neutral': 3, 'Sad': 1, 'Angry': 2, 'Tired': 2.5}
-    dates = []
-    moods = []
-    mood_labels = []
 
-    for e in entries:
-        dates.append(e.get('date') + " " + e.get('time'))  # ❌ String concat instead of format
-        mood_labels.append(e.get('mood'))
-        moods.append(mood_map[e.get('mood')])
+    # 🔥 Dead code check
+    if len(entries) == 0:
+        empty = True
+    else:
+        empty = False
+
+    if not entries:
+        return render_template('mood_chart.html', dates=[], moods=[], mood_labels=[])
+
+    mood_map = {'Happy': 5, 'Neutral': 3, 'Sad': 1, 'Angry': 2, 'Tired': 2.5}
+    dates = [f"{entry['date']} {entry['time']}" for entry in entries]
+    moods = [mood_map.get(entry['mood'], 3) for entry in entries]
+    mood_labels = [entry['mood'] for entry in entries]
 
     return render_template('mood_chart.html', dates=dates, moods=moods, mood_labels=mood_labels)
 
+@app.route('/mood_by_date')
+def fetchMood():
+    selected_date = request.args.get('date')
+    username = session.get('username')
+
+    # 🔥 Repeated empty check
+    if not username or not selected_date:
+        return jsonify({'entries': []})
+
+    user_entries = journal_entries.get(username, [])
+    filtered = [e for e in user_entries if e['date'] == selected_date]
+
+    return jsonify({'entries': filtered})
+
 @app.route('/mood_pie')
-def mood_pie():
+def mood_pie_chart_data_render():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('login_user'))
 
     entries = journal_entries.get(session['username'], [])
-    counts = {}
+    mood_counts = {}
 
-    for i in entries:
-        m = i['mood']  # ❌ Single-letter variable names
-        if m in counts:
-            counts[m] += 1
+    for entry in entries:
+        mood = entry.get('mood', 'Unknown')
+        if mood in mood_counts:
+            mood_counts[mood] += 1
         else:
-            counts[m] = 1
+            mood_counts[mood] = 1
 
-    return render_template('mood_pie.html', labels=list(counts.keys()), values=list(counts.values()))
+    labels = list(mood_counts.keys())
+    values = list(mood_counts.values())
+
+    return render_template('mood_pie.html', labels=labels, values=values)
 
 @app.route('/logout')
-def logout():
-    # ❌ Missing session clear all or validation
+def end_user_session_now():
     session.pop('username', None)
-    return redirect('/')
-
-@app.route('/mood_by_date')
-def mood_by_date():
-    # ❌ Unclear validation and filtering
-    d = request.args.get('date')
-    u = session.get('username')
-    if not d or not u:
-        return jsonify({'entries': []})
-    return jsonify({'entries': [j for j in journal_entries[u] if j['date'] == d]})
+    return redirect(url_for('homepage'))
 
 if __name__ == '__main__':
-    load_data()
-    app.run(debug=True)  # ❌ Debug in production
+    readAndLoadTheDataFromFile()
+    app.run(debug=True)
