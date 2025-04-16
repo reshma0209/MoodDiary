@@ -91,11 +91,8 @@ def load_dashboard():
     if 'username' not in session:
         return redirect(url_for('login_user'))
 
-    # 🔥 Duplicate logic below
-    if session['username'] in journal_entries:
-        user_entries = journal_entries[session['username']]
-    else:
-        user_entries = []
+    # 🔥 Duplicate logic below (repeated code smell)
+    user_entries = journal_entries.get(session['username'], [])
 
     return render_template('dashboard.html', username=session['username'], entries=user_entries)
 
@@ -134,9 +131,9 @@ def mood_chart_stats():
 
     entries = journal_entries.get(session['username'], [])
 
-    # 🔥 Dead code check
+    # 🔥 Dead code check (used variable without a purpose)
     if len(entries) == 0:
-        empty = True
+        empty = True  # 🔥 Unused variable
     else:
         empty = False
 
